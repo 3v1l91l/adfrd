@@ -7,7 +7,7 @@ import numpy as np
 import gc
 from sklearn.model_selection import train_test_split
 import lightgbm as lgb
-import g.pyplot as plt
+import matplotlib.pyplot as plt
 # import seaborn as sns
 from tqdm import tqdm
 
@@ -26,8 +26,8 @@ lgb_params = {
         'metric': 'auc',
         'learning_rate': 0.2,
         #'is_unbalance': 'true',  #because training data is unbalance (replaced with scale_pos_weight)
-        'num_leaves': 7,  # we should let it be smaller than 2^(max_depth)
-        'max_depth': 3,  # -1 means no limit
+        'num_leaves': 198,  # we should let it be smaller than 2^(max_depth)
+        'max_depth': 8,  # -1 means no limit
         'min_child_samples': 100,  # Minimum number of data need in a child(min_data_in_leaf)
         'max_bin': 100,  # Number of bucketed bin for feature values
         'subsample': 0.7,  # Subsample ratio of the training instance.
@@ -45,7 +45,8 @@ lgb_params = {
 
 predictors = [
     #     'ip_rate', 'app_rate', 'device_rate', 'os_rate', 'channel_rate', 'hour_rate',
-    'ip','app', 'device', 'os', 'channel', 'hour','minute', 'quarter'
+    'ip','app', 'device', 'os', 'channel', 'hour','minute', 'quarter', 'user_clicks_this_quarter_count',
+    'user_clicks_quarter_count_1', 'user_clicks_quarter_count_2'
     #               'mean_diff_click_seconds',
     #'ip_day_hour_count', 'ip_app_count', 'ip_app_os_count'
 ]
@@ -72,7 +73,7 @@ bst = lgb.train(lgb_params,
                 evals_result=evals_results,
                 num_boost_round=300,
                 early_stopping_rounds=10,
-                verbose_eval=10
+                verbose_eval=1
                 )
 
 n_estimators = bst.best_iteration

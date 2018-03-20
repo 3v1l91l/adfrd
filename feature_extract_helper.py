@@ -53,7 +53,7 @@ def split_train_to_hdf():
     print(f'Finished in {end_time - start_time} seconds')
 
 
-def set_clicks_per_time_features():
+def set_clicks_per_hour_features():
     print('Set clicks per time features')
     start_time = time.time()
 
@@ -63,27 +63,24 @@ def set_clicks_per_time_features():
 
     gp = train_df[['ip', 'app', 'device', 'os', 'hour', 'day', 'channel']].groupby(
         by=['ip', 'app', 'device', 'os', 'hour', 'day'])[['channel']].count().reset_index().rename(index=str, columns={
-        'channel': 'user_clicks_last_hour_count'})
-    gp['hour'] = gp['hour'] + 1
-    mean_user_clicks_this_hour_count = int(gp['user_clicks_last_hour_count'].mean())
+        'channel': 'user_clicks_this_hour_count'})
+    mean_user_clicks_this_hour_count = int(gp['user_clicks_this_hour_count'].mean())
     train_df = train_df.merge(gp, on=['ip', 'app', 'device', 'os', 'hour', 'day'], how='left')
-    train_df.fillna({'user_clicks_last_hour_count': mean_user_clicks_this_hour_count}, inplace=True)
+    train_df.fillna({'user_clicks_this_hour_count': mean_user_clicks_this_hour_count}, inplace=True)
 
     gp = valid_df[['ip', 'app', 'device', 'os', 'hour', 'day', 'channel']].groupby(
         by=['ip', 'app', 'device', 'os', 'hour', 'day'])[['channel']].count().reset_index().rename(index=str, columns={
-        'channel': 'user_clicks_last_hour_count'})
-    gp['hour'] = gp['hour'] + 1
-    mean_user_clicks_this_hour_count = int(gp['user_clicks_last_hour_count'].mean())
+        'channel': 'user_clicks_this_hour_count'})
+    mean_user_clicks_this_hour_count = int(gp['user_clicks_this_hour_count'].mean())
     valid_df = valid_df.merge(gp, on=['ip', 'app', 'device', 'os', 'hour', 'day'], how='left')
-    valid_df.fillna({'user_clicks_last_hour_count': mean_user_clicks_this_hour_count}, inplace=True)
+    valid_df.fillna({'user_clicks_this_hour_count': mean_user_clicks_this_hour_count}, inplace=True)
 
     gp = test_df[['ip', 'app', 'device', 'os', 'hour', 'day', 'channel']].groupby(
         by=['ip', 'app', 'device', 'os', 'hour', 'day'])[['channel']].count().reset_index().rename(index=str, columns={
-        'channel': 'user_clicks_last_hour_count'})
-    gp['hour'] = gp['hour'] + 1
-    mean_user_clicks_this_hour_count = int(gp['user_clicks_last_hour_count'].mean())
+        'channel': 'user_clicks_this_hour_count'})
+    mean_user_clicks_this_hour_count = int(gp['user_clicks_this_hour_count'].mean())
     test_df = test_df.merge(gp, on=['ip', 'app', 'device', 'os', 'hour', 'day'], how='left')
-    test_df.fillna({'user_clicks_last_hour_count': mean_user_clicks_this_hour_count}, inplace=True)
+    test_df.fillna({'user_clicks_this_hour_count': mean_user_clicks_this_hour_count}, inplace=True)
 
     train_df.to_hdf('train_df.hdf', 'data', mode='w')
     valid_df.to_hdf('valid_df.hdf', 'data', mode='w')
@@ -91,6 +88,75 @@ def set_clicks_per_time_features():
 
     end_time = time.time()
     print(f'Finished in {end_time - start_time} seconds')
+
+
+def set_clicks_per_quarter_features():
+    print('Set clicks per quarter features')
+    start_time = time.time()
+
+    train_df = pd.read_hdf('train_df.hdf', 'data')
+    valid_df = pd.read_hdf('valid_df.hdf', 'data')
+    test_df = pd.read_hdf('test_df.hdf', 'data')
+
+    gp = train_df[['ip', 'app', 'device', 'os', 'quarter', 'day', 'channel']].groupby(
+        by=['ip', 'app', 'device', 'os', 'quarter', 'day'])[['channel']].count().reset_index().rename(index=str, columns={
+        'channel': 'user_clicks_this_quarter_count'})
+    mean_user_clicks_this_quarter_count = int(gp['user_clicks_this_quarter_count'].mean())
+    train_df = train_df.merge(gp, on=['ip', 'app', 'device', 'os', 'quarter', 'day'], how='left')
+    train_df.fillna({'user_clicks_this_quarter_count': mean_user_clicks_this_quarter_count}, inplace=True)
+    gp['quarter'] += 1
+    gp.rename(columns={
+        'user_clicks_this_quarter_count': 'user_clicks_quarter_count_1'}, inplace=True)
+    train_df = train_df.merge(gp, on=['ip', 'app', 'device', 'os', 'quarter', 'day'], how='left')
+    train_df.fillna({'user_clicks_quarter_count_1': mean_user_clicks_this_quarter_count}, inplace=True)
+    gp['quarter'] += 1
+    gp.rename(columns={
+        'user_clicks_quarter_count_1': 'user_clicks_quarter_count_2'}, inplace=True)
+    train_df = train_df.merge(gp, on=['ip', 'app', 'device', 'os', 'quarter', 'day'], how='left')
+    train_df.fillna({'user_clicks_quarter_count_2': mean_user_clicks_this_quarter_count}, inplace=True)
+    train_df.to_hdf('train_df.hdf', 'data', mode='w')
+
+
+    gp = valid_df[['ip', 'app', 'device', 'os', 'quarter', 'day', 'channel']].groupby(
+        by=['ip', 'app', 'device', 'os', 'quarter', 'day'])[['channel']].count().reset_index().rename(index=str, columns={
+        'channel': 'user_clicks_this_quarter_count'})
+    mean_user_clicks_this_quarter_count = int(gp['user_clicks_this_quarter_count'].mean())
+    valid_df = valid_df.merge(gp, on=['ip', 'app', 'device', 'os', 'quarter', 'day'], how='left')
+    valid_df.fillna({'user_clicks_this_quarter_count': mean_user_clicks_this_quarter_count}, inplace=True)
+    gp['quarter'] += 1
+    gp.rename(columns={
+        'user_clicks_this_quarter_count': 'user_clicks_quarter_count_1'}, inplace=True)
+    valid_df = valid_df.merge(gp, on=['ip', 'app', 'device', 'os', 'quarter', 'day'], how='left')
+    valid_df.fillna({'user_clicks_quarter_count_1': mean_user_clicks_this_quarter_count}, inplace=True)
+    gp['quarter'] += 1
+    gp.rename(columns={
+        'user_clicks_quarter_count_1': 'user_clicks_quarter_count_2'}, inplace=True)
+    valid_df = valid_df.merge(gp, on=['ip', 'app', 'device', 'os', 'quarter', 'day'], how='left')
+    valid_df.fillna({'user_clicks_quarter_count_2': mean_user_clicks_this_quarter_count}, inplace=True)
+    valid_df.to_hdf('valid_df.hdf', 'data', mode='w')
+
+
+    gp = test_df[['ip', 'app', 'device', 'os', 'quarter', 'day', 'channel']].groupby(
+        by=['ip', 'app', 'device', 'os', 'quarter', 'day'])[['channel']].count().reset_index().rename(index=str, columns={
+        'channel': 'user_clicks_this_quarter_count'})
+    mean_user_clicks_this_quarter_count = int(gp['user_clicks_this_quarter_count'].mean())
+    test_df = test_df.merge(gp, on=['ip', 'app', 'device', 'os', 'quarter', 'day'], how='left')
+    test_df.fillna({'user_clicks_this_quarter_count': mean_user_clicks_this_quarter_count}, inplace=True)
+    gp['quarter'] += 1
+    gp.rename(columns={
+        'user_clicks_this_quarter_count': 'user_clicks_quarter_count_1'}, inplace=True)
+    test_df = test_df.merge(gp, on=['ip', 'app', 'device', 'os', 'quarter', 'day'], how='left')
+    test_df.fillna({'user_clicks_quarter_count_1': mean_user_clicks_this_quarter_count}, inplace=True)
+    gp['quarter'] += 1
+    gp.rename(columns={
+        'user_clicks_quarter_count_1': 'user_clicks_quarter_count_2'}, inplace=True)
+    test_df = test_df.merge(gp, on=['ip', 'app', 'device', 'os', 'quarter', 'day'], how='left')
+    test_df.fillna({'user_clicks_quarter_count_2': mean_user_clicks_this_quarter_count}, inplace=True)
+    test_df.to_hdf('test_df.hdf', 'data', mode='w')
+
+    end_time = time.time()
+    print(f'Finished in {end_time - start_time} seconds')
+
 
 
 def set_rates_features():
@@ -128,15 +194,22 @@ def set_time_features():
     valid_df = pd.read_hdf('valid_df.hdf', 'data')
     test_df = pd.read_hdf('test_df.hdf', 'data')
 
+    train_df['day'] = pd.to_datetime(train_df['click_time']).dt.day.astype('uint8')
+    valid_df['day'] = pd.to_datetime(valid_df['click_time']).dt.day.astype('uint8')
+    test_df['day'] = pd.to_datetime(test_df['click_time']).dt.day.astype('uint8')
     train_df['hour'] = pd.to_datetime(train_df['click_time']).dt.hour.astype('uint8')
     valid_df['hour'] = pd.to_datetime(valid_df['click_time']).dt.hour.astype('uint8')
     test_df['hour'] = pd.to_datetime(test_df['click_time']).dt.hour.astype('uint8')
     train_df['minute'] = pd.to_datetime(train_df['click_time']).dt.minute.astype('uint8')
     valid_df['minute'] = pd.to_datetime(valid_df['click_time']).dt.minute.astype('uint8')
     test_df['minute'] = pd.to_datetime(test_df['click_time']).dt.minute.astype('uint8')
-    train_df['quarter'] = ((100 * train_df['hour']) + (train_df['minute'] // 15)).astype('uint8')
-    valid_df['quarter'] = ((100 * valid_df['hour']) + (train_df['minute'] // 15)).astype('uint8')
-    test_df['quarter'] = ((100 * test_df['hour']) + (train_df['minute'] // 15)).astype('uint8')
+    train_df['quarter'] = ((4 * train_df['hour']) + (train_df['minute'] // 15)).astype('uint8')
+    valid_df['quarter'] = ((4 * valid_df['hour']) + (valid_df['minute'] // 15)).astype('uint8')
+    test_df['quarter'] = ((4 * test_df['hour']) + (test_df['minute'] // 15)).astype('uint8')
+
+    train_df.drop(['click_time'], inplace=True, axis=1)
+    valid_df.drop(['click_time'], inplace=True, axis=1)
+    test_df.drop(['click_time'], inplace=True, axis=1)
 
     train_df.to_hdf('train_df.hdf', 'data', mode='w')
     valid_df.to_hdf('valid_df.hdf', 'data', mode='w')
