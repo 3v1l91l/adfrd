@@ -39,7 +39,7 @@ def lgb_modelfit_nocv(params, dtrain, dvalid, predictors, target='target', objec
 
     lgb_params.update(params)
 
-    # print("preparing validation datasets")
+    print("preparing validation datasets")
 
     xgtrain = lgb.Dataset(dtrain[predictors].values, label=dtrain[target].values,
                           feature_name=predictors,
@@ -63,9 +63,9 @@ def lgb_modelfit_nocv(params, dtrain, dvalid, predictors, target='target', objec
                      feval=feval)
 
     n_estimators = bst1.best_iteration
-    # print("\nModel Report")
-    # print("n_estimators : ", n_estimators)
-    # print(metrics+":", evals_results['valid'][metrics][n_estimators-1])
+    print("\nModel Report")
+    print("n_estimators : ", n_estimators)
+    print(metrics+":", evals_results['valid'][metrics][n_estimators-1])
 
     return bst1
 
@@ -84,7 +84,7 @@ dtypes = {
 # len_train = 10000
 len_train = 40000000
 len_valid = int(len_train*0.1)
-# print('load train...')
+print('load train...')
 # train_df = pd.read_csv(os.path.join(data_path, 'train.csv'), skiprows=range(1,139903891), nrows=len_train,dtype=dtypes,
 #                        usecols=['ip','app','device','os', 'channel', 'click_time', 'is_attributed'],
 #                        parse_dates=['click_time'])
@@ -96,7 +96,7 @@ train_df = pd.dataframe.pd.read_csv(os.path.join(data_path, 'train.csv'), dtype=
 #                        usecols=['ip','app','device','os', 'channel', 'click_time', 'is_attributed'],
 #                        parse_dates=['click_time'])
 
-# print('load test...')
+print('load test...')
 test_df = pd.dataframe.pd.read_csv(os.path.join(data_path, 'test.csv'), dtype=dtypes,
                       usecols=['ip','app','device','os', 'channel', 'click_time', 'click_id'],
                       parse_dates=['click_time'], nrows=500)
@@ -109,7 +109,7 @@ train_df.reset_index(drop=True, inplace=True)
 del test_df
 gc.collect()
 
-# print('data prep...')
+print('data prep...')
 train_df['day'] = train_df['click_time'].dt.day.astype('uint8')
 train_df['hour'] = train_df['click_time'].dt.hour.astype('uint8')
 train_df['minute'] = train_df['click_time'].dt.minute.astype('uint8')
@@ -120,7 +120,7 @@ if config['save_df']:
     train_df.to_hdf('train_df.pickle','data',mode='w')
 
 # train_df = pd.read_pickle('train_df.pickle')
-# print('Prev click sec...')
+print('Prev click sec...')
 train_df['prev_click_sec'] = train_df[['ip','device','os','day','click_time']].groupby(
     by=['ip','device','os','day'])[['click_time']].diff()['click_time'].dt.total_seconds()#.astype('uint16')
 # print(f'Mean prev_click_sec {train_df.prev_click_sec.mean()}')
@@ -128,7 +128,7 @@ train_df['prev_click_sec'] = train_df[['ip','device','os','day','click_time']].g
 if config['save_df']:
     train_df.to_hdf('train_df.pickle','data',mode='w')
 
-# print('Next click sec...')
+print('Next click sec...')
 train_df['next_click_sec'] = train_df[['ip','device','os','day','click_time']].groupby(
     by=['ip','device','os','day'])[['click_time']].diff(-1)['click_time'].dt.total_seconds().abs()#.astype('uint16')
 # print(f'Mean next_click_sec {train_df.next_click_sec.mean()}')
@@ -151,7 +151,7 @@ gc.collect()
 if config['save_df']:
     train_df.to_hdf('train_df.pickle','data',mode='w')
 
-# print('group by : unique_apps_hour')
+print('group by : unique_apps_hour')
 gp = train_df[['ip','device', 'os', 'channel', 'day', 'hour', 'app']].groupby(by=['ip','device', 'os', 'channel', 'day', 'hour'])[['app']].nunique().reset_index().rename(index=str, columns={'app': 'unique_apps_hour'})
 train_df = train_df.merge(gp, on=['ip','device', 'os', 'channel', 'day', 'hour'], how='left')
 # print(f'Mean unique_apps_hour ${train_df.unique_apps_hour.mean()}')
@@ -160,7 +160,7 @@ gc.collect()
 if config['save_df']:
     train_df.to_hdf('train_df.pickle','data',mode='w')
 
-# print('group by : unique_apps')
+print('group by : unique_apps')
 gp = train_df[['ip','device', 'os', 'channel', 'app']].groupby(by=['ip','device', 'os', 'channel'])[['app']].nunique().reset_index().rename(index=str, columns={'app': 'unique_apps'})
 train_df = train_df.merge(gp, on=['ip','device', 'os', 'channel'], how='left')
 gp['unique_apps_hour'] = gp['unique_apps'].astype('uint16')
@@ -170,7 +170,7 @@ gc.collect()
 if config['save_df']:
     train_df.to_hdf('train_df.pickle','data',mode='w')
 
-# print('group by : unique_channels_hour')
+print('group by : unique_channels_hour')
 gp = train_df[['ip','device', 'os', 'day', 'hour', 'channel']].groupby(by=['ip','device', 'os', 'day', 'hour'])[['channel']].nunique().reset_index().rename(index=str, columns={'channel': 'unique_channels_hour'})
 train_df = train_df.merge(gp, on=['ip','device', 'os', 'day', 'hour'], how='left')
 gp['unique_channels_hour'] = gp['unique_channels_hour'].astype('uint16')
@@ -180,7 +180,7 @@ gc.collect()
 if config['save_df']:
     train_df.to_hdf('train_df.pickle','data',mode='w')
 
-# print('group by : unique_channels')
+print('group by : unique_channels')
 gp = train_df[['ip','device', 'os', 'channel']].groupby(by=['ip','device', 'os'])[['channel']].nunique().reset_index().rename(index=str, columns={'channel': 'unique_channels'})
 gp['unique_channels'] = gp['unique_channels'].astype('uint16')
 train_df = train_df.merge(gp, on=['ip','device', 'os'], how='left')
@@ -191,16 +191,16 @@ if config['save_df']:
     train_df.to_hdf('train_df.pickle','data',mode='w')
 
 # train_df = pd.read_pickle('train_df.pickle')
-# print("vars and data type: ")
+print("vars and data type: ")
 train_df.info()
 
 test_df = train_df[len_train:]
 val_df = train_df[(len_train-len_valid):len_train]
 train_df = train_df[:(len_train-len_valid)]
 
-# print("train size: ", len(train_df))
-# print("valid size: ", len(val_df))
-# print("test size : ", len(test_df))
+print("train size: ", len(train_df))
+print("valid size: ", len(val_df))
+print("test size : ", len(test_df))
 
 target = 'is_attributed'
 predictors = [
@@ -220,7 +220,7 @@ sub['click_id'] = test_df['click_id'].astype('int')
 
 gc.collect()
 
-# print("Training...")
+print("Training...")
 params = {
     'learning_rate': 0.2,
     #'is_unbalance': 'true', # replaced with scale_pos_weight argument
@@ -254,9 +254,9 @@ del train_df
 del val_df
 gc.collect()
 
-# print("Predicting...")
+print("Predicting...")
 sub['is_attributed'] = bst.predict(test_df[predictors])
-# print("writing...")
+print("writing...")
 sub.to_csv('sub.csv',index=False)
-# print("done...")
-# print(sub.info())
+print("done...")
+print(sub.info())
