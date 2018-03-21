@@ -99,7 +99,7 @@ train_df = pd.dataframe.pd.read_csv(os.path.join(data_path, 'train.csv'), dtype=
 print('load test...')
 test_df = pd.dataframe.pd.read_csv(os.path.join(data_path, 'test.csv'), dtype=dtypes,
                       usecols=['ip','app','device','os', 'channel', 'click_time', 'click_id'],
-                      parse_dates=['click_time'], nrows=500)
+                      parse_dates=['click_time'])
 # test_df = pd.DataFrame(columns=np.concatenate((train_df.columns,['click_id'])))
 
 
