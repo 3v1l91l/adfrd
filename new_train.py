@@ -4,6 +4,8 @@ import numpy as np
 from sklearn.cross_validation import train_test_split
 import lightgbm as lgb
 import gc
+import matplotlib.pyplot as plt
+import os
 
 config = {
     'save_df': True
@@ -66,7 +68,7 @@ def lgb_modelfit_nocv(params, dtrain, dvalid, predictors, target='target', objec
 
     return bst1
 
-path = 'input/'
+data_path = 'input'
 
 dtypes = {
         'ip'            : 'uint32',
@@ -79,48 +81,63 @@ dtypes = {
         }
 
 # len_train = 10000
-len_train = 40000000
+len_train = 60000000
 len_valid = int(len_train*0.1)
 print('load train...')
-# train_df = pd.read_csv(path+"train.csv", skiprows=range(1,139903891), nrows=len_train,dtype=dtypes,
+# train_df = pd.read_csv(os.path.join(data_path, 'train.csv'), skiprows=range(1,139903891), nrows=len_train,dtype=dtypes,
 #                        usecols=['ip','app','device','os', 'channel', 'click_time', 'is_attributed'],
 #                        parse_dates=['click_time'])
-train_df = pd.read_csv(path+"train.csv", nrows=len_train,dtype=dtypes,
+train_df = pd.read_csv(os.path.join(data_path, 'train.csv'), dtype=dtypes,
                        usecols=['ip','app','device','os', 'channel', 'click_time', 'is_attributed'],
-                       parse_dates=['click_time'])
+                       parse_dates=['click_time'], nrows=len_train)
+
+# train_df = pd.read_csv(os.path.join(data_path, 'train.csv'),dtype=dtypes,
+#                        usecols=['ip','app','device','os', 'channel', 'click_time', 'is_attributed'],
+#                        parse_dates=['click_time'])
+
 print('load test...')
-# test_df = pd.read_csv(path+"test.csv", dtype=dtypes, usecols=['ip','app','device','os', 'channel', 'click_time', 'click_id'])
-test_df = pd.DataFrame(columns=np.concatenate((train_df.columns,['click_id'])))
+test_df = pd.read_csv(os.path.join(data_path, 'test.csv'), dtype=dtypes,
+                      usecols=['ip','app','device','os', 'channel', 'click_time', 'click_id'],
+                      parse_dates=['click_time'], nrows=500)
+# test_df = pd.DataFrame(columns=np.concatenate((train_df.columns,['click_id'])))
 
 
 train_df=train_df.append(test_df)
+train_df.reset_index(drop=True, inplace=True)
 
 del test_df
 gc.collect()
 
 print('data prep...')
 train_df['day'] = train_df['click_time'].dt.day.astype('uint8')
-train_df['hour'] = pd.to_datetime(train_df.click_time).dt.hour.astype('uint8')
+train_df['hour'] = train_df['click_time'].dt.hour.astype('uint8')
+train_df['minute'] = train_df['click_time'].dt.minute.astype('uint8')
+train_df['quarter'] = ((4 * train_df['hour']) + (train_df['minute'] // 15)).astype('uint8')
+
 gc.collect()
 if config['save_df']:
-    train_df.to_pickle('train_df.pickle')
+    train_df.to_hdf('train_df.pickle','data',mode='w')
 
 # train_df = pd.read_pickle('train_df.pickle')
-print('Prev and next click sec...')
+print('Prev click sec...')
 train_df['prev_click_sec'] = train_df[['ip','device','os','day','click_time']].groupby(
-    by=['ip','device','os','day'])[['click_time']].diff()['click_time'].dt.total_seconds().astype('uint16')
+    by=['ip','device','os','day'])[['click_time']].diff()['click_time'].dt.total_seconds()#.astype('uint16')
 print(f'Mean prev_click_sec {train_df.prev_click_sec.mean()}')
 print(f'Mean prev_click_sec ratio null {train_df.prev_click_sec.isnull().sum()/len(train_df)}')
 if config['save_df']:
-    train_df.to_pickle('train_df.pickle')
+    train_df.to_hdf('train_df.pickle','data',mode='w')
 
+print('Next click sec...')
 train_df['next_click_sec'] = train_df[['ip','device','os','day','click_time']].groupby(
-    by=['ip','device','os','day'])[['click_time']].diff(-1)['click_time'].dt.total_seconds().abs().astype('uint16')
+    by=['ip','device','os','day'])[['click_time']].diff(-1)['click_time'].dt.total_seconds().abs()#.astype('uint16')
 print(f'Mean next_click_sec {train_df.next_click_sec.mean()}')
 print(f'Mean next_click_sec ratio null {train_df.next_click_sec.isnull().sum()/len(train_df)}')
+
+train_df.drop('click_time', axis=1, inplace=True)
 gc.collect()
 if config['save_df']:
-    train_df.to_pickle('train_df.pickle')
+    train_df.to_hdf('train_df.pickle','data',mode='w')
+
 
 gp = train_df[['ip', 'app', 'device', 'os', 'hour', 'day', 'channel']].groupby(
     by=['ip', 'app', 'device', 'os', 'hour', 'day'])[['channel']].count().reset_index().rename(index=str, columns={
@@ -131,7 +148,7 @@ print(f'Mean next_click_sec {train_df.user_clicks_this_hour_count.mean()}')
 del gp
 gc.collect()
 if config['save_df']:
-    train_df.to_pickle('train_df.pickle')
+    train_df.to_hdf('train_df.pickle','data',mode='w')
 
 print('group by : unique_apps_hour')
 gp = train_df[['ip','device', 'os', 'channel', 'day', 'hour', 'app']].groupby(by=['ip','device', 'os', 'channel', 'day', 'hour'])[['app']].nunique().reset_index().rename(index=str, columns={'app': 'unique_apps_hour'})
@@ -140,7 +157,7 @@ print(f'Mean unique_apps_hour ${train_df.unique_apps_hour.mean()}')
 del gp
 gc.collect()
 if config['save_df']:
-    train_df.to_pickle('train_df.pickle')
+    train_df.to_hdf('train_df.pickle','data',mode='w')
 
 print('group by : unique_apps')
 gp = train_df[['ip','device', 'os', 'channel', 'app']].groupby(by=['ip','device', 'os', 'channel'])[['app']].nunique().reset_index().rename(index=str, columns={'app': 'unique_apps'})
@@ -150,7 +167,7 @@ print(f'Mean unique_apps ${train_df.unique_apps.mean()}')
 del gp
 gc.collect()
 if config['save_df']:
-    train_df.to_pickle('train_df.pickle')
+    train_df.to_hdf('train_df.pickle','data',mode='w')
 
 print('group by : unique_channels_hour')
 gp = train_df[['ip','device', 'os', 'day', 'hour', 'channel']].groupby(by=['ip','device', 'os', 'day', 'hour'])[['channel']].nunique().reset_index().rename(index=str, columns={'channel': 'unique_channels_hour'})
@@ -160,7 +177,7 @@ print(f'Mean unique_channels_hour ${train_df.unique_channels_hour.mean()}')
 del gp
 gc.collect()
 if config['save_df']:
-    train_df.to_pickle('train_df.pickle')
+    train_df.to_hdf('train_df.pickle','data',mode='w')
 
 print('group by : unique_channels')
 gp = train_df[['ip','device', 'os', 'channel']].groupby(by=['ip','device', 'os'])[['channel']].nunique().reset_index().rename(index=str, columns={'channel': 'unique_channels'})
@@ -170,8 +187,9 @@ print(f'Mean unique_channels ${train_df.unique_channels.mean()}')
 del gp
 gc.collect()
 if config['save_df']:
-    train_df.to_pickle('train_df.pickle')
+    train_df.to_hdf('train_df.pickle','data',mode='w')
 
+# train_df = pd.read_pickle('train_df.pickle')
 print("vars and data type: ")
 train_df.info()
 
@@ -191,7 +209,7 @@ predictors = [
     'prev_click_sec', 'next_click_sec'
               ]
 categorical = [
-    'app','device','os','channel'
+    'app','device','os','channel',
     'hour'
                ]
 
@@ -224,8 +242,12 @@ bst = lgb_modelfit_nocv(params,
                         metrics='auc',
                         early_stopping_rounds=5,
                         verbose_eval=True,
-                        num_boost_round=100,
+                        num_boost_round=1000,
                         categorical_features=categorical)
+
+fig, ax = plt.subplots(figsize=(12, 18))
+lgb.plot_importance(bst, height=0.5, ax=ax)
+plt.savefig('feature_importance_lgb.png', bbox_inches='tight')
 
 del train_df
 del val_df
@@ -234,6 +256,6 @@ gc.collect()
 print("Predicting...")
 sub['is_attributed'] = bst.predict(test_df[predictors])
 print("writing...")
-sub.to_csv('sub_lgb_balanced99.csv',index=False)
+sub.to_csv('sub.csv',index=False)
 print("done...")
 print(sub.info())
